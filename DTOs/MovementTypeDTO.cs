@@ -8,9 +8,12 @@ namespace BorrowingSystemAPI.DTOs
         [Required(ErrorMessage = "Name is required")]
 
         public string Name { get; set; }
-        
-        [Required(ErrorMessage = "Operation is required")]
 
-        public int Operation { get; set; }
+        [Required(ErrorMessage = "Description is required")]
+        public string Description { get; set; }
+
+        [Required(ErrorMessage = "IsInput is required")]
+
+        public bool IsInput { get; set; }
     }
 }

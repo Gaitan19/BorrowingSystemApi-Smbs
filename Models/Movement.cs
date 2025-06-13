@@ -9,6 +9,8 @@
         public Item Item { get; set; }
         public DateTime MovementDate { get; set; } = DateTime.UtcNow;
         public int Quantity { get; set; }
+
+        public string Description { get; set; }
         public DateTime? DeletedAt { get; set; }
         public MovementType MovementType { get; set; }
     }

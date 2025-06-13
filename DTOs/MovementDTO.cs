@@ -6,5 +6,7 @@
         public Guid? MovementTypeId { get; set; }
         public DateTime? MovementDate { get; set; }
         public int Quantity { get; set; }
+
+        public string Description { get; set; }
     }
 }
