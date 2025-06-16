@@ -6,10 +6,7 @@ namespace BorrowingSystemAPI.DTOs.RequestDTOs
     {
         [Required]
         public Guid ItemId { get; set; }
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "The quantity must be at least 1.")]
 
-
-        public int Quantity { get; set; }
+        public string? Description { get; set; }
     }
 }

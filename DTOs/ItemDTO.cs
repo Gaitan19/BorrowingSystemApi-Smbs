@@ -15,5 +15,16 @@ namespace BorrowingSystemAPI.DTOs
         [Required(ErrorMessage = "The Quantity field is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "The Quantity field must be a positive integer.")]
         public int Quantity { get; set; }
+
+        [MinLength(5, ErrorMessage = "The Brand field must have at least 5 characters.")]
+        public string? Brand { get; set; }
+
+        [MinLength(3, ErrorMessage = "The Color field must have at least 3 characters.")]
+
+        public string? Color { get; set; }
+
+        [MinLength(5, ErrorMessage = "The Code field must have at least 5 characters.")]
+
+        public string? Code { get; set; }
     }
 }

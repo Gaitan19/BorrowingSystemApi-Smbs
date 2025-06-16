@@ -22,8 +22,10 @@
         public List<RequestItem> RequestItems { get; set; } = new List<RequestItem>();
         public RequestStatus RequestStatus { get; set; } = RequestStatus.Pending;
 
-        public ReturnStatus ReturnStatus { get; set; } = ReturnStatus.Pending;
+        public bool ReturnIsCompleted { get; set; } = false;
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
+
+        public DateTime? ReturnDate { get; set; }
         public DateTime? DeletedAt { get; set; }
     }
 }

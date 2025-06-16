@@ -9,7 +9,7 @@ namespace BorrowingSystemAPI.DTOs.RequestDTOs
         public Guid RequestedByUserId { get; set; }
         public List<RequestItemDTO> RequestItems { get; set; }
         public RequestStatus RequestStatus { get; set; }
-        public ReturnStatus ReturnStatus { get; set; }
+        public bool ReturnIsCompleted { get; set; }
         public DateTime RequestDate { get; set; }
     }
 }

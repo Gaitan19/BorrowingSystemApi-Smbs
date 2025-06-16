@@ -61,11 +61,19 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+//builder.Services.AddDbContext<BorrowingContext>(options =>
+//{
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+//    options.EnableSensitiveDataLogging(); 
+//});
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Base de datos
 builder.Services.AddDbContext<BorrowingContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    options.EnableSensitiveDataLogging(); 
-});
+    options.UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions.EnableRetryOnFailure())
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 

@@ -51,9 +51,28 @@ namespace BorrowingSystemAPI.Services
             if (existingRequest == null)
                 throw new ServiceException("Request not found.", ErrorCode.NotFound);
 
-            if(existingRequest.RequestStatus != RequestStatus.Pending || existingRequest.ReturnStatus == ReturnStatus.Returned )
+            if(existingRequest.RequestStatus != RequestStatus.Pending || existingRequest.ReturnIsCompleted )
                 throw new ServiceException("You cannot edit an approved or rejected request.", ErrorCode.BadRequest);
 
+
+            var itemCounts = dto.RequestItems
+                .GroupBy(ri => ri.ItemId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var (itemId, count) in itemCounts)
+            {
+                var item = _itemRepository.GetItemById(itemId);
+                if (item == null)
+                    throw new ServiceException($"Item {itemId} not found.", ErrorCode.NotFound);
+
+                if (item.Quantity < count)
+                {
+                    throw new ServiceException(
+                        $"Insufficient stock for item {item.Name}. " +
+                        $"Available: {item.Quantity}, Requested: {count}",
+                        ErrorCode.BadRequest);
+                }
+            }
 
             existingRequest.Description = dto.Description;
 
@@ -68,14 +87,13 @@ namespace BorrowingSystemAPI.Services
                 if (item == null)
                     throw new ServiceException($"Item {reqItemDto.ItemId} not found.", ErrorCode.NotFound);
 
-                if (item.Quantity < reqItemDto.Quantity)
-                    throw new ServiceException($"Insufficient stock for the item {item.Name}.", ErrorCode.BadRequest);
+                
 
                 var requestItem = new RequestItem
                 {
                     RequestId = id,
                     ItemId = reqItemDto.ItemId,
-                    Quantity = reqItemDto.Quantity
+                    Description = reqItemDto.Description,
                 };
 
                 var newRequestItem = _requestItemRepository.CreateRequestItem(requestItem);
@@ -85,7 +103,7 @@ namespace BorrowingSystemAPI.Services
                 updatedRequestItems.Add(new RequestItemDTO
                 {
                     ItemId = requestItem.ItemId,
-                    Quantity = requestItem.Quantity
+                    Description = requestItem.Description
                 });
             }
 
@@ -101,7 +119,7 @@ namespace BorrowingSystemAPI.Services
                 Description = existingRequest.Description,
                 RequestedByUserId = existingRequest.RequestedByUserId,
                 RequestStatus = existingRequest.RequestStatus,
-                ReturnStatus = existingRequest.ReturnStatus,
+                ReturnIsCompleted = existingRequest.ReturnIsCompleted,
                 RequestDate = existingRequest.RequestDate,
                 RequestItems = updatedRequestItems
             };
@@ -120,39 +138,46 @@ namespace BorrowingSystemAPI.Services
 
         public RequestDTO CreateRequest(CreateRequestDTO requestDto)
         {
+            var user = _userRepository.GetUserById(requestDto.RequestedByUserId);
+            if (user == null)
+                throw new ServiceException("User not found.", ErrorCode.NotFound);
+
+            var itemCounts = requestDto.RequestItems
+                .GroupBy(ri => ri.ItemId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var (itemId, count) in itemCounts)
+            {
+                var item = _itemRepository.GetItemById(itemId);
+                if (item == null)
+                    throw new ServiceException($"Item {itemId} not found.", ErrorCode.NotFound);
+
+                if (item.Quantity < count)
+                {
+                    throw new ServiceException(
+                        $"Insufficient stock for item {item.Name}. " +
+                        $"Available: {item.Quantity}, Requested: {count}",
+                        ErrorCode.BadRequest);
+                }
+            }
+
             var newRequest = new Request
             {
                 Description = requestDto.Description,
                 RequestedByUserId = requestDto.RequestedByUserId,
                 RequestStatus = RequestStatus.Pending,
-                ReturnStatus = ReturnStatus.Pending
+                ReturnIsCompleted = false
             };
-
-            var user = _userRepository.GetUserById(requestDto.RequestedByUserId);
-            if (user == null)
-                throw new ServiceException("User not found.", ErrorCode.NotFound);
 
             var createdRequest = _requestRepository.CreateRequest(newRequest);
 
             foreach (var reqItem in requestDto.RequestItems)
             {
-                var item = _itemRepository.GetItemById(reqItem.ItemId);
-                if (item == null)
-                {
-                    _requestRepository.DeleteRequestPermanently(createdRequest.Id);
-                    throw new ServiceException($"Item {reqItem.ItemId} not found.", ErrorCode.NotFound);
-                }
-
-                if (item.Quantity < reqItem.Quantity)
-                { 
-                    _requestRepository.DeleteRequestPermanently(createdRequest.Id);
-                    throw new ServiceException($"Insufficient stock for the item {item.Name}.", ErrorCode.BadRequest);
-                }
                 var requestItem = new RequestItem
                 {
                     RequestId = createdRequest.Id,
                     ItemId = reqItem.ItemId,
-                    Quantity = reqItem.Quantity
+                    Description = reqItem.Description
                 };
 
                 _requestItemRepository.CreateRequestItem(requestItem);
@@ -164,7 +189,7 @@ namespace BorrowingSystemAPI.Services
                 Description = createdRequest.Description,
                 RequestedByUserId = createdRequest.RequestedByUserId,
                 RequestStatus = createdRequest.RequestStatus,
-                ReturnStatus = createdRequest.ReturnStatus,
+                ReturnIsCompleted = createdRequest.ReturnIsCompleted,
                 RequestDate = createdRequest.RequestDate,
                 RequestItems = requestDto.RequestItems
             };
@@ -172,7 +197,7 @@ namespace BorrowingSystemAPI.Services
 
         public string ApproveOrRejectRequest(ApproveRejectRequestDTO dto)
         {
-            var request = _requestRepository.GetRequestById(dto.RequestId);
+            var request = _requestRepository.GetRequestByIdWithoutItem(dto.RequestId);
             if (request == null)
                 throw new ServiceException("Request not found.", ErrorCode.NotFound);
 
@@ -181,27 +206,30 @@ namespace BorrowingSystemAPI.Services
 
             if (dto.IsApproved)
             {
-                var movementTypeOut = _movementTypeRepository.GetMovementTypeByName("out");
+
+
+                var movementTypeOut = _movementTypeRepository.GetMovementTypeByName("borrow");
                 if (movementTypeOut == null)
-                    throw new ServiceException("Movement type 'out' not found.", ErrorCode.NotFound);
+                    throw new ServiceException("Movement type 'borrow' not found.", ErrorCode.NotFound);
 
                 foreach (var reqItem in request.RequestItems)
                 {
-                    var item = reqItem.Item;
+                    var item = _itemRepository.GetItemById(reqItem.ItemId);
+
                     if (item == null)
                         throw new ServiceException($"Item {reqItem.ItemId} not found.", ErrorCode.NotFound);
 
-                    if (item.Quantity < reqItem.Quantity)
-                        throw new ServiceException($"Insufficient stock for the item {item.Name}.", ErrorCode.BadRequest);
 
-                    item.Quantity -= reqItem.Quantity;
+
+                    item.Quantity -= 1;
                     _itemRepository.UpdateItem(item);
 
                     var movement = new Movement
                     {
                         ItemId = item.Id,
                         MovementTypeId = movementTypeOut.Id,
-                        Quantity = reqItem.Quantity
+                        Quantity = 1,
+                        Description = $"Borrowed {item.Name} by user {request.RequestedByUserId} on {DateTime.UtcNow}."
                     };
 
                     _movementRepository.CreateMovement(movement);
@@ -222,36 +250,38 @@ namespace BorrowingSystemAPI.Services
 
         public string ReturnItems(Guid requestId)
         {
-            var request = _requestRepository.GetRequestById(requestId);
+            var request = _requestRepository.GetRequestByIdWithoutItem(requestId);
             if (request == null) throw new ServiceException("Request not found.", ErrorCode.NotFound);
 
-            if (request.RequestStatus != RequestStatus.Approved || request.ReturnStatus == ReturnStatus.Returned)
+            if (request.RequestStatus != RequestStatus.Approved || request.ReturnIsCompleted)
                 throw new ServiceException("Only approved requests can be returned.", ErrorCode.BadRequest);
 
-            var movementTypeIn = _movementTypeRepository.GetMovementTypeByName("in");
+            var movementTypeIn = _movementTypeRepository.GetMovementTypeByName("return");
 
-            if (movementTypeIn == null) throw new ServiceException("Movement type 'in' not found.", ErrorCode.NotFound);
+            if (movementTypeIn == null) throw new ServiceException("Movement type 'return' not found.", ErrorCode.NotFound);
 
             foreach (var reqItem in request.RequestItems)
             {
-                var item = reqItem.Item;
+                var item = _itemRepository.GetItemById(reqItem.ItemId);
 
                 if (item == null) throw new ServiceException($"Item {reqItem.ItemId} not found.", ErrorCode.NotFound);
 
-                item.Quantity += reqItem.Quantity;
+                item.Quantity += 1;
                 _itemRepository.UpdateItem(item);
 
                 var movement = new Movement
                 {
                     ItemId = item.Id,
                     MovementTypeId = movementTypeIn.Id,
-                    Quantity = reqItem.Quantity
+                    Quantity = 1,
+                    Description = $"Returned {item.Name} by user {request.RequestedByUserId} on {DateTime.UtcNow}."
                 };
 
                 _movementRepository.CreateMovement(movement);
             }
 
-            request.ReturnStatus = ReturnStatus.Returned;
+            request.ReturnIsCompleted = true;
+            request.ReturnDate = DateTime.UtcNow;
             _requestRepository.UpdateRequest(request);
 
             return "The items were returned correctly.";

@@ -18,10 +18,8 @@ namespace BorrowingSystemAPI.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
 
-            // Filtro global en Item
             modelBuilder.Entity<Item>().HasQueryFilter(i => i.DeletedAt == null);
 
-            // Filtro global en RequestItem (aplicar el filtro aquí también)
             modelBuilder.Entity<RequestItem>()
                 .HasQueryFilter(ri => ri.Item.DeletedAt == null);
 
@@ -29,14 +27,12 @@ namespace BorrowingSystemAPI.Context
             modelBuilder.Entity<RequestItem>()
                 .HasKey(ri => ri.Id);
 
-            // Relación User -> Requests
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Requests)
                 .WithOne(r => r.RequestedByUser)
                 .HasForeignKey(r => r.RequestedByUserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relación Item -> ItemMovements
             modelBuilder.Entity<Item>()
                 .HasMany(i => i.ItemMovements)
                 .WithOne(m => m.Item)
@@ -44,7 +40,6 @@ namespace BorrowingSystemAPI.Context
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // Relación Request -> RequestItems
             modelBuilder.Entity<RequestItem>()
                 .HasOne(ri => ri.Request)
                 .WithMany(r => r.RequestItems)
@@ -57,7 +52,6 @@ namespace BorrowingSystemAPI.Context
                 .HasForeignKey(ri => ri.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Agregar filtros de "soft delete"
             modelBuilder.Entity<User>().HasQueryFilter(u => u.DeletedAt == null);
             modelBuilder.Entity<Item>().HasQueryFilter(i => i.DeletedAt == null);
             modelBuilder.Entity<Movement>().HasQueryFilter(m => m.DeletedAt == null);
