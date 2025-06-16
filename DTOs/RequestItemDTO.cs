@@ -7,5 +7,6 @@ namespace BorrowingSystemAPI.DTOs
         public Guid RequestId { get; set; }
         public Guid ItemId { get; set; }
         public string? Description { get; set; }
+        public int Quantity { get; set; }
     }
 }
