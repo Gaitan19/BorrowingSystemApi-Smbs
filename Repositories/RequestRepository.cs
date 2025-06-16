@@ -59,7 +59,7 @@ namespace BorrowingSystemAPI.Repositories
                    .AsNoTracking()
                    .Include(r => r.RequestedByUser)
                    .Include(r => r.RequestItems)
-                       .ThenInclude(ri => ri.Item)
+                       .ThenInclude(ri => ri.Item).AsNoTracking()
                    .FirstOrDefault(r => r.Id == id);
             }
 
@@ -68,6 +68,16 @@ namespace BorrowingSystemAPI.Repositories
                 .FirstOrDefault(r => r.Id == id);
         }
 
+        public Request? GetRequestByIdWithoutItem(Guid id)
+        {
+            
+                return _context.Requests
+                   .AsNoTracking()
+                   .Include(r => r.RequestedByUser)
+                   .Include(r => r.RequestItems)
+                   .FirstOrDefault(r => r.Id == id);
+           
+        }
 
 
         public Request UpdateRequest(Request request)

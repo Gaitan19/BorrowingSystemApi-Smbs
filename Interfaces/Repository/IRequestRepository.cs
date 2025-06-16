@@ -10,6 +10,9 @@ namespace BorrowingSystemAPI.Interfaces.Repository
         IEnumerable<Request> GetAllRequests();
         Request? GetRequestById(Guid id, bool includeRelations = true);
 
+        Request? GetRequestByIdWithoutItem(Guid id);
+
+
         Request UpdateRequest(Request request);
     }
 }

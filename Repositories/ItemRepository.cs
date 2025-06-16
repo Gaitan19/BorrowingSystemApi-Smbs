@@ -45,12 +45,28 @@ namespace BorrowingSystemAPI.Repositories
 
         }
 
+        //public Item UpdateItem(Item item)
+        //{
+
+        //    var updatedItem = _context.Items.Update(item);
+        //    _context.SaveChanges();
+        //    return updatedItem.Entity;
+        //}
         public Item UpdateItem(Item item)
         {
-
-            var updatedItem = _context.Items.Update(item);
+            var trackedEntity = _context.Items.Local.FirstOrDefault(e => e.Id == item.Id);
+            if (trackedEntity != null)
+            {
+                // Actualiza las propiedades manualmente para evitar conflicto de tracking
+                _context.Entry(trackedEntity).CurrentValues.SetValues(item);
+            }
+            else
+            {
+                _context.Items.Attach(item);
+                _context.Entry(item).State = EntityState.Modified;
+            }
             _context.SaveChanges();
-            return updatedItem.Entity;
+            return item;
         }
 
         public bool ItemExists(Guid id)
