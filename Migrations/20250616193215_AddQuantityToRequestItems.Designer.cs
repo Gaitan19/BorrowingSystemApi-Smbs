@@ -3,6 +3,7 @@ using System;
 using BorrowingSystemAPI.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BorrowingSystemAPI.Migrations
 {
     [DbContext(typeof(BorrowingContext))]
-    partial class BorrowingContextModelSnapshot : ModelSnapshot
+    [Migration("20250616193215_AddQuantityToRequestItems")]
+    partial class AddQuantityToRequestItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
